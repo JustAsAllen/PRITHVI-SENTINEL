@@ -7,6 +7,9 @@ const UIController = (() => {
     let isAutoDemoActive = false;
     let liveSimInterval = null;
     let dispatchInterval = null;
+    const lastKpiValues = {};
+    const kpiBase = {};
+    const kpiDrift = {};
 
     const init = () => {
         setupTabs();
@@ -281,14 +284,14 @@ const UIController = (() => {
         return Math.max(0, Math.round(val + delta));
     };
 
-    const updateLiveKPIs = () => {
+const updateLiveKPIs = () => {
         let totalFires = 0, totalArea = 0, totalSmoke = 0, totalAqi = 0, totalEnergy = 0;
         const count = Object.keys(REGIONS).length;
 
         Object.entries(REGIONS).forEach(([id, r]) => {
-            r.active_fires = simulateFluctuate(r.active_fires, 0.02);
-            r.area_affected_ha = simulateFluctuate(r.area_affected_ha, 0.01);
-            r.smoke_plume_km = simulateFluctuate(r.smoke_plume_km, 0.02);
+            r.active_fires = simulateFluctuate(r.active_fires, 0.004);
+            r.area_affected_ha = simulateFluctuate(r.area_affected_ha, 0.003);
+            r.smoke_plume_km = simulateFluctuate(r.smoke_plume_km, 0.008);
 
             totalFires += r.active_fires;
             totalArea += r.area_affected_ha;
@@ -302,16 +305,45 @@ const UIController = (() => {
             if (fireEl) fireEl.innerText = r.active_fires;
         });
 
-        animateKpiVal('kpi-fires', totalFires);
-        animateKpiVal('kpi-area', `${totalArea.toLocaleString()} ha`);
-        animateKpiVal('kpi-aqi', Math.round(totalAqi / count));
-        animateKpiVal('kpi-smoke', `${totalSmoke} km`);
+        const avgAqi = Math.round(totalAqi / count);
+
+        // Drift-accumulator: only push a KPI update (and its pulse) when a value
+        // has actually moved by a meaningful amount — prevents per-tick flicker.
+        if (!kpiBase.fires) {
+            kpiBase.fires = Math.round(totalFires);
+            kpiBase.area = Math.round(totalArea);
+            kpiBase.smoke = Math.round(totalSmoke);
+            animateKpiVal('kpi-fires', kpiBase.fires);
+            animateKpiVal('kpi-area', `${kpiBase.area.toLocaleString()} ha`);
+            animateKpiVal('kpi-smoke', `${kpiBase.smoke} km`);
+        }
+
+        kpiDrift.fires += totalFires - kpiBase.fires;
+        kpiDrift.area += totalArea - kpiBase.area;
+        kpiDrift.smoke += totalSmoke - kpiBase.smoke;
+
+        if (Math.abs(kpiDrift.fires) / kpiBase.fires >= 0.01) {
+            kpiBase.fires += Math.round(kpiDrift.fires); kpiDrift.fires = 0;
+            animateKpiVal('kpi-fires', kpiBase.fires);
+        }
+        if (Math.abs(kpiDrift.area) / kpiBase.area >= 0.01) {
+            kpiBase.area += Math.round(kpiDrift.area); kpiDrift.area = 0;
+            animateKpiVal('kpi-area', `${kpiBase.area.toLocaleString()} ha`);
+        }
+        if (Math.abs(kpiDrift.smoke) / kpiBase.smoke >= 0.01) {
+            kpiBase.smoke += Math.round(kpiDrift.smoke); kpiDrift.smoke = 0;
+            animateKpiVal('kpi-smoke', `${kpiBase.smoke} km`);
+        }
+
+        animateKpiVal('kpi-aqi', avgAqi);
         animateKpiVal('kpi-energy', `${(totalEnergy / 1e3).toFixed(1)}k GJ`);
     };
 
     const animateKpiVal = (id, newVal) => {
         const el = document.getElementById(id);
         if (!el) return;
+        if (lastKpiValues[id] === String(newVal)) return;
+        lastKpiValues[id] = String(newVal);
         el.innerText = newVal;
         el.classList.remove('val-bounce');
         void el.offsetWidth;

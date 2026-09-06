@@ -291,7 +291,6 @@
 .live-dot {
     display: inline-block; width: 7px; height: 7px; margin-left: 4px; vertical-align: 2px;
     border-radius: 50%; background: var(--neon-green); box-shadow: 0 0 8px var(--neon-green);
-    animation: liveBlink 1.6s infinite;
 }
 
 /* Buttons */
