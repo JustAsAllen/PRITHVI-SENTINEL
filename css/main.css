@@ -78,7 +78,6 @@ body {
     background: radial-gradient(circle, rgba(0, 240, 255, 0.04) 0%, rgba(157, 78, 221, 0.02) 40%, transparent 70%);
     pointer-events: none;
     z-index: -2;
-    animation: ambientDrift 20s ease-in-out infinite alternate;
 }
 
 @keyframes ambientDrift {
@@ -151,8 +150,8 @@ body {
 }
 
 @keyframes badgePulse {
-    0%, 100% { box-shadow: 0 0 8px rgba(0, 240, 255, 0.3); }
-    50% { box-shadow: 0 0 16px rgba(0, 240, 255, 0.6); }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
 }
 
 .brand-name {
@@ -244,8 +243,8 @@ body {
 }
 
 @keyframes statusPulse {
-    0%, 100% { box-shadow: 0 0 4px var(--neon-green); }
-    50% { box-shadow: 0 0 10px var(--neon-green); }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
 }
 
 .status-label { font-size: 0.6rem; color: var(--neon-green); }
